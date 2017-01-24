@@ -1,0 +1,97 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'io.fabric'
+apply plugin: 'com.getkeepsafe.dexcount'
+
+kapt {
+    generateStubs = true
+}
+
+def secrets = new Properties()
+secrets.load(rootProject.file('secrets.properties').newDataInputStream())
+
+android {
+    compileSdkVersion constants.targetSdkVersion
+    buildToolsVersion "25.0.2"
+
+    defaultConfig {
+        applicationId "com.bendb.profiles"
+        minSdkVersion constants.minSdkVersion
+        targetSdkVersion constants.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders = [
+            crashlyticsApiKey: secrets.get('keys.crashlytics'),
+            mapsApiKey: secrets.get('keys.google_maps'),
+        ]
+    }
+
+    signingConfigs {
+        debug {
+            storeFile     = rootProject.file(secrets.get('signing.debug.storeFile'))
+            storePassword = secrets.get('signing.debug.storePass')
+            keyAlias      = secrets.get('signing.debug.keyAlias')
+            keyPassword   = secrets.get('signing.debug.keyPass')
+        }
+
+        release {
+            storeFile     = rootProject.file(secrets.get('signing.release.storeFile'))
+            storePassword = secrets.get('signing.release.storePass')
+            keyAlias      = secrets.get('signing.release.keyAlias')
+            keyPassword   = secrets.get('signing.release.keyPass')
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+
+            signingConfig signingConfigs.debug
+
+            // Suppress Crashlytics' build-ID regen and mapping-file upload,
+            // since we aren't proguarding in debug
+            ext.alwaysUpdateBuildId = false
+        }
+
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            signingConfig signingConfigs.release
+        }
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+        test.java.srcDirs += 'src/test/kotlin'
+    }
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    // Dagger 2
+    compile 'com.google.dagger:dagger:2.8'
+    kapt 'com.google.dagger:dagger-compiler:2.8'
+    provided 'org.glassfish:javax.annotation:10.0-b28'
+
+    compile 'com.jakewharton.timber:timber:4.3.1'
+
+    compile 'com.android.support:appcompat-v7:25.1.0'
+    compile 'com.android.support:recyclerview-v7:25.1.0'
+    compile 'com.google.android.gms:play-services-location:10.0.1'
+    compile 'com.google.android.gms:play-services-maps:10.0.1'
+
+    compile('com.crashlytics.sdk.android:crashlytics:2.6.5@aar') {
+        transitive = true
+    }
+
+    testCompile 'junit:junit:4.12'
+
+    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+}
+
